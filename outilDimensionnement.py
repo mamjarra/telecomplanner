@@ -2,6 +2,7 @@ import streamlit as st
 import math
 from fpdf import FPDF
 import os
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="TelecomPlanner+", layout="wide")
 st.title("📡 TelecomPlanner+ - Outil de Dimensionnement Télécom")
@@ -14,6 +15,7 @@ if "rapport_data" not in st.session_state:
 # Choix du module
 network_type = st.sidebar.selectbox("Choisir le type de réseau", [
     "Dimensionnement GSM", "Liaison Hertienne", "Liaison Optique", "Dimensionnement LTE"])
+
 
 # === MODULE GSM ===
 if network_type == "Dimensionnement GSM":
@@ -35,10 +37,24 @@ if network_type == "Dimensionnement GSM":
         st.success(f"Capacité maximale du réseau : {capacite:.0f} communications simultanées")
         st.info(f"Largeur d'un canal : {largeur_canal:.3f} MHz")
 
+        # Données pour le rapport
         st.session_state.rapport_data.append([
             "GSM", f"Surface: {superficie} km², Cellule: {surface_cellule} km²",
             f"Capacité: {capacite:.0f}, Canaux: {nb_canaux}, Cluster N: {taille_cluster}"
         ])
+
+        # Graphique avec matplotlib
+        fig, ax = plt.subplots()
+        ax.bar(["Cellules", "Clusters", "Capacité"], [nb_cellules, nb_clusters, capacite], color=["#6fa8dc", "#93c47d", "#f6b26b"])
+        ax.set_ylabel("Valeurs")
+        ax.set_title("📊 Résumé du dimensionnement GSM")
+        st.pyplot(fig)
+
+        # Enregistrement temporaire du graphe
+        graph_path = "graph_gsm.png"
+        fig.savefig(graph_path)
+        st.session_state.gsm_graph_path = graph_path
+
 
 # === MODULE HERTIENNE ===
 elif network_type == "Liaison Hertienne":
@@ -60,6 +76,23 @@ elif network_type == "Liaison Hertienne":
             "Hertzienne", f"Fréquence: {freq} GHz, Distance: {distance} km",
             f"Pr: {pr:.2f} dBm, FSPL: {fspl:.2f} dB"
         ])
+
+        # Graphe puissance
+        fig, ax = plt.subplots()
+        labels = ["Puissance émission", "FSPL + pertes", "Puissance reçue"]
+        values = [pe_dBm, fspl + pertes, pr]
+        colors = ["#6fa8dc", "#f4cccc", "#93c47d"]
+
+        ax.bar(labels, values, color=colors)
+        ax.set_ylabel("dBm / dB")
+        ax.set_title("📊 Bilan de Puissance Liaison Hertienne")
+        st.pyplot(fig)
+
+        # Sauvegarde graphe
+        graph_path = "graph_hertienne.png"
+        fig.savefig(graph_path)
+        st.session_state.hertienne_graph_path = graph_path
+
 
 # === MODULE FIBRE OPTIQUE ===
 elif network_type == "Liaison Optique":
@@ -84,6 +117,23 @@ elif network_type == "Liaison Optique":
             f"Pout: {pout:.2f} dBm, Marge: {marge:.2f} dB"
         ])
 
+        # Graphe optique
+        fig, ax = plt.subplots()
+        labels = ["Puissance entrée", "Pertes totales", "Puissance reçue"]
+        values = [pin, total_pertes, pout]
+        colors = ["#6fa8dc", "#f4cccc", "#93c47d"]
+
+        ax.bar(labels, values, color=colors)
+        ax.set_ylabel("dBm / dB")
+        ax.set_title("📊 Bilan Puissance Liaison Fibre Optique")
+        st.pyplot(fig)
+
+        # Sauvegarde graphe
+        graph_path = "graph_optique.png"
+        fig.savefig(graph_path)
+        st.session_state.optique_graph_path = graph_path
+
+
 # === MODULE LTE ===
 elif network_type == "Dimensionnement LTE":
     st.header("📱 Dimensionnement LTE")
@@ -101,6 +151,22 @@ elif network_type == "Dimensionnement LTE":
             "LTE", f"Utilisateurs: {nb_utilisateurs}, Débit/utilisateur: {debit_utilisateur} Mbps",
             f"Capacité/cellule: {capacite_cellule} Mbps, Cellules nécessaires: {nb_cellules_lte}"
         ])
+
+        # Graphe LTE
+        fig, ax = plt.subplots()
+        labels = ["Débit total requis (Mbps)", "Capacité cellule (Mbps)", "Cellules nécessaires"]
+        values = [debit_total, capacite_cellule, nb_cellules_lte]
+        colors = ["#6fa8dc", "#f4cccc", "#93c47d"]
+
+        ax.bar(labels, values, color=colors)
+        ax.set_title("📊 Dimensionnement LTE")
+        st.pyplot(fig)
+
+        # Sauvegarde graphe
+        graph_path = "graph_lte.png"
+        fig.savefig(graph_path)
+        st.session_state.lte_graph_path = graph_path
+
 
 # === AFFICHAGE DES DONNÉES SAISIES ===
 if st.session_state.rapport_data:
@@ -135,6 +201,5 @@ if st.sidebar.button("📄 Générer Rapport PDF") and st.session_state.rapport_
             file_name=rapport_path,
             mime="application/pdf"
         )
-
 
     os.remove(rapport_path)
